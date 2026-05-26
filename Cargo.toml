@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = ["git-forensic"]
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.81"
+license = "MIT"
+authors = ["Albert Hui <albert@securityronin.com>"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[profile.fuzz]
+inherits = "dev"
+opt-level = 3
+incremental = false
