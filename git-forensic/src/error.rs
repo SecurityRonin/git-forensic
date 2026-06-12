@@ -27,6 +27,9 @@ pub enum GitError {
     #[error("deflate-bomb guard triggered: decompressed size exceeds limit")]
     DeflateBomb,
 
+    #[error("packfile/index read out of bounds")]
+    OutOfBounds,
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 }

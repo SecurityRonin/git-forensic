@@ -5,6 +5,7 @@ use crate::error::{GitError, Result};
 use crate::hash::GitHash;
 use crate::loose;
 use crate::object::{ObjectKind, RawObject};
+use crate::pack;
 use crate::refs;
 use crate::tree::TreeObject;
 
@@ -44,32 +45,21 @@ impl GitRepo {
         refs::resolve_ref(&self.git_dir, name)
     }
 
-    /// Read and verify a loose object by hash.
+    /// Read and verify an object by hash, from a loose file or a packfile.
     ///
-    /// Only loose objects are supported. If the object is not loose **and** the
-    /// repository has packfiles, the absence is unreliable (the object may be
-    /// packed), so a distinct [`GitError::PackfileUnsupported`] is returned
-    /// rather than a misleading [`GitError::ObjectNotFound`] — a packed object is
-    /// present, not absent, and the analyst must not be sent chasing the wrong
-    /// cause.
+    /// Loose objects are tried first; if absent, every packfile is searched
+    /// (resolving `OFS_DELTA`/`REF_DELTA` chains). A truly missing object yields
+    /// [`GitError::ObjectNotFound`]; an unsupported pack *index* version yields
+    /// the distinct [`GitError::PackfileUnsupported`] — never a misleading
+    /// not-found.
     pub fn read_object(&self, hash: &GitHash) -> Result<RawObject> {
         match loose::read_loose(&self.objects_dir, hash) {
-            Err(GitError::ObjectNotFound(h)) if self.has_packfiles() => {
-                Err(GitError::PackfileUnsupported(h))
-            }
+            Err(GitError::ObjectNotFound(h)) => match pack::read_packed(&self.objects_dir, hash)? {
+                Some(obj) => Ok(obj),
+                None => Err(GitError::ObjectNotFound(h)),
+            },
             other => other,
         }
-    }
-
-    /// True if the repository has any packfile (`objects/pack/*.pack`).
-    fn has_packfiles(&self) -> bool {
-        std::fs::read_dir(self.objects_dir.join("pack"))
-            .map(|entries| {
-                entries
-                    .flatten()
-                    .any(|e| e.path().extension().is_some_and(|x| x == "pack"))
-            })
-            .unwrap_or(false)
     }
 
     /// Read and parse a commit object.

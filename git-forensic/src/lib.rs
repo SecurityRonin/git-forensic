@@ -5,6 +5,7 @@ pub mod refs;
 pub mod commit;
 pub mod tree;
 pub mod loose;
+pub mod pack;
 pub mod repo;
 
 pub use error::{GitError, Result};

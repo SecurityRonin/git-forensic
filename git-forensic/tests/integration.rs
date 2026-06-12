@@ -78,11 +78,10 @@ fn git_out(root: &Path, args: &[&str]) -> String {
 }
 
 #[test]
-fn packed_object_reports_packfile_not_a_misleading_not_found() {
-    // A real packed object: `git repack` moves loose objects into a packfile, the
-    // normal state of any repo touched by `git gc`/clone. The object still EXISTS;
-    // reporting it as "not found" sends the analyst chasing the wrong cause. It
-    // must name the real reason: the object is stored in a packfile.
+fn packed_object_is_read_from_the_packfile() {
+    // `git repack` moves loose objects into a packfile (the normal post-gc/clone
+    // state). The object still EXISTS — read_object must read it from the pack,
+    // not report a misleading not-found.
     let tr = TestRepo::new_two_commit();
     let root = tr.dir.path();
     let blob_hex = git_out(root, &["rev-parse", "HEAD:world.txt"]);
@@ -90,13 +89,9 @@ fn packed_object_reports_packfile_not_a_misleading_not_found() {
 
     let repo = tr.repo();
     let hash = GitHash::from_hex(&blob_hex).expect("valid hash");
-    let err = repo.read_object(&hash).expect_err("packed object is not loose");
-    let msg = err.to_string();
-    assert!(
-        msg.contains("pack"),
-        "a packed object must report packfile storage, not a misleading \
-         not-found: got {msg:?}"
-    );
+    let obj = repo.read_object(&hash).expect("packed object must be read");
+    assert_eq!(obj.data, b"world\n");
+    assert!(obj.verified, "packed object SHA1 must verify");
 }
 
 // ── GitRepo::open ─────────────────────────────────────────────────────────────
