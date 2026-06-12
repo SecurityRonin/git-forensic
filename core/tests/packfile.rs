@@ -10,7 +10,7 @@ use std::path::Path;
 use std::process::Command;
 use tempfile::TempDir;
 
-use git_forensic::{GitHash, GitRepo, ObjectKind};
+use git_core::{GitHash, GitRepo, ObjectKind};
 
 /// Build a repo whose `git repack` produces both whole and delta objects, then
 /// pack everything into a single packfile (no loose objects remain).

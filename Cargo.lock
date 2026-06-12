@@ -112,6 +112,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
+name = "forensicnomicon"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beb5aa5a16edfc4fb436fad2602d63da02a9bc9bdd7ed5e23a56f63bbccefc10"
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -135,7 +141,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "git-forensic"
+name = "git-core"
 version = "0.1.0"
 dependencies = [
  "flate2",
@@ -143,6 +149,15 @@ dependencies = [
  "sha1",
  "tempfile",
  "thiserror",
+]
+
+[[package]]
+name = "git-forensic"
+version = "0.1.0"
+dependencies = [
+ "forensicnomicon",
+ "git-core",
+ "tempfile",
 ]
 
 [[package]]

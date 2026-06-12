@@ -8,7 +8,7 @@ use std::path::Path;
 use std::process::Command;
 use tempfile::TempDir;
 
-use git_forensic::{GitHash, GitRepo, ObjectKind};
+use git_core::{GitHash, GitRepo, ObjectKind};
 
 // ── fixture builder ──────────────────────────────────────────────────────────
 

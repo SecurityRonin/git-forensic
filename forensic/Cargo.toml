@@ -1,0 +1,16 @@
+[package]
+name = "git-forensic"
+version = "0.1.0"
+description = "Forensic anomaly auditor for Git object stores — commit-time inversion (backdating) as graded report::Finding, built on git-core"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+git-core = { version = "0.1", path = "../core" }
+# Git knowledge + the shared report model (Severity/Category/Observation).
+forensicnomicon = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
