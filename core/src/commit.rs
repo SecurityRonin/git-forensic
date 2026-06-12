@@ -19,6 +19,10 @@ pub struct CommitObject {
     pub author: Signature,
     pub committer: Signature,
     pub message: String,
+    /// True iff a `gpgsig` header was present (the commit is cryptographically
+    /// signed). The signature's validity is not checked here — only its
+    /// presence, which is what a signing-policy audit reasons about.
+    pub is_signed: bool,
 }
 
 impl CommitObject {
@@ -31,6 +35,7 @@ impl CommitObject {
         let mut parents = Vec::new();
         let mut author = None;
         let mut committer = None;
+        let mut is_signed = false;
         let mut message_start = text.len();
 
         for (i, line) in text.lines().enumerate() {
@@ -53,6 +58,12 @@ impl CommitObject {
                 author = Some(parse_signature(rest)?);
             } else if let Some(rest) = line.strip_prefix("committer ") {
                 committer = Some(parse_signature(rest)?);
+            } else if line.strip_prefix("gpgsig ").is_some() {
+                // A signed commit carries `gpgsig <signature>`; its continuation
+                // lines start with a single space and match no header prefix, so
+                // they fall through harmlessly. We record only the presence —
+                // signature validity is out of scope for the reader.
+                is_signed = true;
             }
         }
 
@@ -65,6 +76,7 @@ impl CommitObject {
             committer: committer
                 .ok_or_else(|| GitError::InvalidObject("commit missing committer".into()))?,
             message: text[message_start..].to_string(),
+            is_signed,
         })
     }
 }

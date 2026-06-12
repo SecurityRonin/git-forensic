@@ -15,8 +15,10 @@
 
 pub mod attribution;
 pub mod reflog;
+pub mod signatures;
 
 pub use reflog::{audit_reflog, ReflogAnomaly};
+pub use signatures::{audit_signatures, SignatureAnomaly};
 
 use forensicnomicon::report::{Category, Evidence, Observation, Severity, Source};
 use git_core::{CommitObject, GitHash, GitRepo, Result};
@@ -163,6 +165,7 @@ mod tests {
             author: sig(author_time),
             committer: sig(committer_time),
             message: "m".into(),
+            is_signed: false,
         }
     }
 

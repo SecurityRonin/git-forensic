@@ -108,6 +108,7 @@ mod tests {
             author,
             committer,
             message: "m".into(),
+            is_signed: false,
         }
     }
 
