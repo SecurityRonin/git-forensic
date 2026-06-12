@@ -51,7 +51,10 @@ fn flags_a_real_reset_in_the_reflog() {
     assert_eq!(found.len(), 1, "exactly the reset entry must be flagged");
     let ReflogAnomaly::HistoryRewrite {
         operation, message, ..
-    } = &found[0];
+    } = &found[0]
+    else {
+        panic!("expected a HistoryRewrite finding")
+    };
     assert_eq!(operation, "reset");
     assert!(message.starts_with("reset:"));
 }
@@ -69,7 +72,9 @@ fn flags_a_real_amend_in_the_reflog() {
     let repo = GitRepo::open(root).unwrap();
     let found = audit_reflog(&repo, "HEAD").unwrap();
     assert_eq!(found.len(), 1, "the amend entry must be flagged");
-    let ReflogAnomaly::HistoryRewrite { operation, .. } = &found[0];
+    let ReflogAnomaly::HistoryRewrite { operation, .. } = &found[0] else {
+        panic!("expected a HistoryRewrite finding")
+    };
     assert_eq!(operation, "amend");
 }
 
@@ -91,7 +96,7 @@ fn plain_commits_are_not_flagged() {
 
 #[test]
 fn finding_carries_code_severity_category() {
-    use forensicnomicon::report::{Category, Severity};
+    use forensicnomicon::report::{Category, Observation, Severity};
     use git_forensic::source;
 
     let tmp = tempfile::tempdir().unwrap();

@@ -6,6 +6,7 @@ use crate::hash::GitHash;
 use crate::loose;
 use crate::object::{ObjectKind, RawObject};
 use crate::pack;
+use crate::reflog::{self, ReflogEntry};
 use crate::refs;
 use crate::tree::TreeObject;
 
@@ -107,6 +108,17 @@ impl GitRepo {
             repo: self,
             next: Some(from),
         }
+    }
+
+    /// Read the reflog for `refname` (e.g. `"HEAD"`, `"refs/heads/main"`).
+    ///
+    /// Returns an empty vec when the log file is absent (git creates one only
+    /// after the ref first moves), never an error for mere absence.
+    ///
+    /// # Errors
+    /// Propagates a non-`NotFound` I/O error encountered reading the log file.
+    pub fn reflog(&self, refname: &str) -> Result<Vec<ReflogEntry>> {
+        reflog::read_reflog(&self.git_dir, refname)
     }
 }
 

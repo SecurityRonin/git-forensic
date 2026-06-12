@@ -14,6 +14,9 @@
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 pub mod attribution;
+pub mod reflog;
+
+pub use reflog::{audit_reflog, ReflogAnomaly};
 
 use forensicnomicon::report::{Category, Evidence, Observation, Severity, Source};
 use git_core::{CommitObject, GitHash, GitRepo, Result};
