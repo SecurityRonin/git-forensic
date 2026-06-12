@@ -13,6 +13,8 @@
 #![forbid(unsafe_code)]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
+pub mod attribution;
+
 use forensicnomicon::report::{Category, Evidence, Observation, Severity, Source};
 use git_core::{CommitObject, GitHash, GitRepo, Result};
 
