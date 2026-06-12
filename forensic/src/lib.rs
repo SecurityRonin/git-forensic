@@ -16,9 +16,11 @@
 pub mod attribution;
 pub mod reflog;
 pub mod signatures;
+pub mod unreachable;
 
 pub use reflog::{audit_reflog, ReflogAnomaly};
 pub use signatures::{audit_signatures, SignatureAnomaly};
+pub use unreachable::{audit_unreachable, UnreachableObject};
 
 use forensicnomicon::report::{Category, Evidence, Observation, Severity, Source};
 use git_core::{CommitObject, GitHash, GitRepo, Result};

@@ -120,6 +120,32 @@ impl GitRepo {
     pub fn reflog(&self, refname: &str) -> Result<Vec<ReflogEntry>> {
         reflog::read_reflog(&self.git_dir, refname)
     }
+
+    /// Every object in the store: the union of loose and packed objects, with
+    /// duplicates removed (an object may be both loose and packed mid-`gc`).
+    ///
+    /// # Errors
+    /// Propagates a [`GitError`] from packfile-index enumeration.
+    pub fn all_objects(&self) -> Result<Vec<GitHash>> {
+        let mut seen = std::collections::HashSet::new();
+        let mut out = Vec::new();
+        for hash in loose::list_loose(&self.objects_dir)
+            .into_iter()
+            .chain(pack::list_packed(&self.objects_dir)?)
+        {
+            if seen.insert(hash) {
+                out.push(hash);
+            }
+        }
+        Ok(out)
+    }
+
+    /// Every ref in the repository as `(refname, target_hash)` pairs (loose
+    /// `refs/**`, `packed-refs`, and `HEAD`).
+    #[must_use]
+    pub fn all_refs(&self) -> Vec<(String, GitHash)> {
+        refs::list_refs(&self.git_dir)
+    }
 }
 
 struct CommitWalker<'a> {

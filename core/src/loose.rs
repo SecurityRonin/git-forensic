@@ -11,6 +11,46 @@ use crate::object::{ObjectKind, RawObject};
 /// Maximum decompressed size accepted (deflate-bomb guard): 512 MiB.
 const MAX_DECOMPRESSED_SIZE: u64 = 512 * 1024 * 1024;
 
+/// Enumerate every loose object under `objects_dir` by scanning
+/// `objects/<xx>/<38hex>`. Malformed names are skipped; never panics. A missing
+/// `objects` directory simply yields an empty list.
+#[must_use]
+pub fn list_loose(objects_dir: &Path) -> Vec<GitHash> {
+    let mut out = Vec::new();
+    let Ok(shards) = std::fs::read_dir(objects_dir) else {
+        return out;
+    };
+    for shard in shards.flatten() {
+        let shard_name = shard.file_name();
+        let Some(prefix) = shard_name.to_str() else {
+            continue;
+        };
+        // Object shards are exactly two hex chars (skip `pack`, `info`, …).
+        if prefix.len() != 2 || !prefix.bytes().all(|b| b.is_ascii_hexdigit()) {
+            continue;
+        }
+        let Ok(files) = std::fs::read_dir(shard.path()) else {
+            continue;
+        };
+        for file in files.flatten() {
+            let file_name = file.file_name();
+            let Some(rest) = file_name.to_str() else {
+                continue;
+            };
+            if rest.len() != 38 {
+                continue;
+            }
+            let mut hex = String::with_capacity(40);
+            hex.push_str(prefix);
+            hex.push_str(rest);
+            if let Ok(hash) = GitHash::from_hex(&hex) {
+                out.push(hash);
+            }
+        }
+    }
+    out
+}
+
 /// Read and parse a loose git object file.
 pub fn read_loose(objects_dir: &Path, hash: &GitHash) -> Result<RawObject> {
     let (dir, file) = hash.object_path();

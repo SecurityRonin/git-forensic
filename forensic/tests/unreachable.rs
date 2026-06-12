@@ -12,7 +12,7 @@ use std::process::Command;
 
 use forensicnomicon::report::{Category, Observation};
 use git_core::GitRepo;
-use git_forensic::{audit_unreachable, source, UnreachableObject};
+use git_forensic::{audit_unreachable, source};
 
 fn git(root: &Path, args: &[&str]) -> std::process::Output {
     let out = Command::new("git")

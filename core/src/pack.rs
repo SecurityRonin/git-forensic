@@ -56,6 +56,52 @@ pub fn read_packed(objects_dir: &Path, hash: &GitHash) -> Result<Option<RawObjec
     Ok(None)
 }
 
+/// Enumerate every object SHA across all packfiles under `objects_dir`.
+///
+/// Walks the sorted name table of each `.idx` (version 2). A missing pack
+/// directory yields an empty list; an unsupported (non-v2) index fails loud.
+///
+/// # Errors
+/// Returns [`GitError`] on an I/O failure or a malformed/unsupported index.
+pub fn list_packed(objects_dir: &Path) -> Result<Vec<GitHash>> {
+    let pack_dir = objects_dir.join("pack");
+    let Ok(entries) = fs::read_dir(&pack_dir) else {
+        return Ok(Vec::new());
+    };
+    let mut idx_paths: Vec<_> = entries
+        .flatten()
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "idx"))
+        .collect();
+    idx_paths.sort();
+
+    let mut out = Vec::new();
+    for idx_path in idx_paths {
+        let idx = fs::read(&idx_path)?;
+        idx_names(&idx, &mut out)?;
+    }
+    Ok(out)
+}
+
+/// Append every SHA in an index-v2 name table to `out`.
+fn idx_names(idx: &[u8], out: &mut Vec<GitHash>) -> Result<()> {
+    if idx.len() < 8 || idx[0..4] != IDX_V2_MAGIC || be_u32(idx, 4)? != 2 {
+        // Mirror `idx_lookup`: a v1 index or anything else is not supported.
+        // The hash is unknown here, so report bounds rather than guess one.
+        return Err(GitError::OutOfBounds);
+    }
+    const FANOUT: usize = 8;
+    let count = be_u32(idx, FANOUT + 255 * 4)? as usize;
+    let names = FANOUT + 256 * 4;
+    for i in 0..count {
+        let name = idx
+            .get(names + i * 20..names + i * 20 + 20)
+            .ok_or(GitError::OutOfBounds)?;
+        out.push(GitHash::from_bytes(name)?);
+    }
+    Ok(())
+}
+
 /// Binary-search an index-v2 fanout/name table for `hash`, returning its pack
 /// byte offset. Non-v2 indexes fail loud rather than silently miss.
 fn idx_lookup(idx: &[u8], hash: &GitHash) -> Result<Option<u64>> {
