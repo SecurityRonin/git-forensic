@@ -183,7 +183,7 @@ fn read_object_at(
     }
 }
 
-/// Resolve a REF_DELTA base by hash — it may live in a pack or as a loose object.
+/// Resolve a `REF_DELTA` base by hash — it may live in a pack or as a loose object.
 fn resolve_base(objects_dir: &Path, hash: &GitHash, depth: u32) -> Result<(ObjectKind, Vec<u8>)> {
     if depth > MAX_DELTA_DEPTH {
         return Err(GitError::InvalidObject("delta chain too deep".into()));
@@ -217,7 +217,7 @@ fn parse_object_header(pack: &[u8], off: usize) -> Result<(u8, usize, usize)> {
     Ok((type_id, size, pos))
 }
 
-/// Parse the OFS_DELTA negative base offset. Returns `(distance, body_offset)`.
+/// Parse the `OFS_DELTA` negative base offset. Returns `(distance, body_offset)`.
 fn parse_ofs_delta(pack: &[u8], off: usize) -> Result<(usize, usize)> {
     let mut pos = off;
     let mut b = *pack.get(pos).ok_or(GitError::OutOfBounds)?;

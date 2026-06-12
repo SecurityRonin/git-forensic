@@ -45,8 +45,7 @@ impl CommitObject {
                     .char_indices()
                     .filter(|(_, c)| *c == '\n')
                     .nth(i)
-                    .map(|(pos, _)| pos + 1)
-                    .unwrap_or(text.len());
+                    .map_or(text.len(), |(pos, _)| pos + 1);
                 message_start = byte_pos;
                 break;
             }

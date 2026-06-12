@@ -153,7 +153,7 @@ struct CommitWalker<'a> {
     next: Option<GitHash>,
 }
 
-impl<'a> Iterator for CommitWalker<'a> {
+impl Iterator for CommitWalker<'_> {
     type Item = Result<CommitObject>;
 
     fn next(&mut self) -> Option<Self::Item> {

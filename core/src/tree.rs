@@ -15,11 +15,11 @@ impl TreeEntry {
     }
 
     pub fn is_executable(&self) -> bool {
-        self.mode == 0o100755
+        self.mode == 0o100_755
     }
 
     pub fn is_symlink(&self) -> bool {
-        self.mode == 0o120000
+        self.mode == 0o120_000
     }
 }
 

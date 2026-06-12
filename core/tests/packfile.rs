@@ -24,9 +24,10 @@ fn packed_repo() -> TempDir {
 
     std::fs::write(root.join("a.txt"), b"hello packfile forensics\n").unwrap();
     // big + a near-copy so the packer delta-encodes one against the other.
+    use std::fmt::Write as _;
     let mut big = String::new();
     for i in 1..=30 {
-        big.push_str(&format!("line {i} the quick brown fox\n"));
+        let _ = writeln!(big, "line {i} the quick brown fox");
     }
     std::fs::write(root.join("big.txt"), &big).unwrap();
     std::fs::write(root.join("big2.txt"), format!("{big}line 31 extra\n")).unwrap();
@@ -41,8 +42,8 @@ fn packed_repo() -> TempDir {
     dir
 }
 
-/// A packed repo forced to use REF_DELTA (type 7) — the 20-byte-base-hash form —
-/// so that delta path is validated, not just OFS_DELTA.
+/// A packed repo forced to use `REF_DELTA` (type 7) — the 20-byte-base-hash form —
+/// so that delta path is validated, not just `OFS_DELTA`.
 fn packed_repo_ref_delta() -> TempDir {
     let dir = packed_repo();
     let root = dir.path();
