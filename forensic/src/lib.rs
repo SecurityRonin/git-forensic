@@ -90,9 +90,15 @@ impl Observation for GitAnomaly {
 /// Audit a single parsed commit for anomalies (pure; side-effect free).
 #[must_use]
 pub fn audit_commit(commit: &CommitObject) -> Vec<GitAnomaly> {
-    // RED stub — replaced by the real check in the GREEN commit.
-    let _ = commit;
-    Vec::new()
+    let mut out = Vec::new();
+    if commit.committer.timestamp < commit.author.timestamp {
+        out.push(GitAnomaly::CommitterBeforeAuthor {
+            commit: commit.hash,
+            author_time: commit.author.timestamp,
+            committer_time: commit.committer.timestamp,
+        });
+    }
+    out
 }
 
 /// Audit every commit reachable from `from` (first-parent walk) in `repo`.
