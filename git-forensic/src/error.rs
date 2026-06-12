@@ -5,6 +5,13 @@ pub enum GitError {
     #[error("object not found: {0}")]
     ObjectNotFound(GitHash),
 
+    #[error(
+        "object {0} not found among loose objects; the repository has packfile(s), \
+         which are not yet supported — the object may be packed (this is not a \
+         confirmed absence)"
+    )]
+    PackfileUnsupported(GitHash),
+
     #[error("invalid hash: {0}")]
     InvalidHash(String),
 

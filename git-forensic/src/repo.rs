@@ -45,8 +45,31 @@ impl GitRepo {
     }
 
     /// Read and verify a loose object by hash.
+    ///
+    /// Only loose objects are supported. If the object is not loose **and** the
+    /// repository has packfiles, the absence is unreliable (the object may be
+    /// packed), so a distinct [`GitError::PackfileUnsupported`] is returned
+    /// rather than a misleading [`GitError::ObjectNotFound`] — a packed object is
+    /// present, not absent, and the analyst must not be sent chasing the wrong
+    /// cause.
     pub fn read_object(&self, hash: &GitHash) -> Result<RawObject> {
-        loose::read_loose(&self.objects_dir, hash)
+        match loose::read_loose(&self.objects_dir, hash) {
+            Err(GitError::ObjectNotFound(h)) if self.has_packfiles() => {
+                Err(GitError::PackfileUnsupported(h))
+            }
+            other => other,
+        }
+    }
+
+    /// True if the repository has any packfile (`objects/pack/*.pack`).
+    fn has_packfiles(&self) -> bool {
+        std::fs::read_dir(self.objects_dir.join("pack"))
+            .map(|entries| {
+                entries
+                    .flatten()
+                    .any(|e| e.path().extension().is_some_and(|x| x == "pack"))
+            })
+            .unwrap_or(false)
     }
 
     /// Read and parse a commit object.

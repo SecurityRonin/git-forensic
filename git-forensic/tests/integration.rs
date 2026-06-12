@@ -66,6 +66,39 @@ impl TestRepo {
     }
 }
 
+/// Run a git subcommand in `root`, returning trimmed stdout.
+fn git_out(root: &Path, args: &[&str]) -> String {
+    let out = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .output()
+        .expect("git command failed");
+    assert!(out.status.success(), "git {args:?} failed");
+    String::from_utf8(out.stdout).unwrap().trim().to_string()
+}
+
+#[test]
+fn packed_object_reports_packfile_not_a_misleading_not_found() {
+    // A real packed object: `git repack` moves loose objects into a packfile, the
+    // normal state of any repo touched by `git gc`/clone. The object still EXISTS;
+    // reporting it as "not found" sends the analyst chasing the wrong cause. It
+    // must name the real reason: the object is stored in a packfile.
+    let tr = TestRepo::new_two_commit();
+    let root = tr.dir.path();
+    let blob_hex = git_out(root, &["rev-parse", "HEAD:world.txt"]);
+    git_out(root, &["repack", "-a", "-d", "-q"]); // pack everything, drop loose
+
+    let repo = tr.repo();
+    let hash = GitHash::from_hex(&blob_hex).expect("valid hash");
+    let err = repo.read_object(&hash).expect_err("packed object is not loose");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("pack"),
+        "a packed object must report packfile storage, not a misleading \
+         not-found: got {msg:?}"
+    );
+}
+
 // ── GitRepo::open ─────────────────────────────────────────────────────────────
 
 #[test]
