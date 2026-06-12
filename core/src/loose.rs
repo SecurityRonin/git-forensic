@@ -69,5 +69,9 @@ pub fn decompress_and_parse(expected: &GitHash, compressed: &[u8]) -> Result<Raw
         )));
     }
 
-    Ok(RawObject { kind, data, verified })
+    Ok(RawObject {
+        kind,
+        data,
+        verified,
+    })
 }

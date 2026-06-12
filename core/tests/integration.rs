@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Integration tests for git-forensic.
 //!
 //! Fixtures are created with the real `git` binary in a temp directory, ensuring
@@ -131,8 +132,13 @@ fn resolve_ref_main_equals_head() {
     let fix = TestRepo::new_two_commit();
     let repo = fix.repo();
     let head = repo.head().expect("HEAD");
-    let main = repo.resolve_ref("refs/heads/main").expect("refs/heads/main");
-    assert_eq!(head, main, "HEAD and refs/heads/main must point to same commit");
+    let main = repo
+        .resolve_ref("refs/heads/main")
+        .expect("refs/heads/main");
+    assert_eq!(
+        head, main,
+        "HEAD and refs/heads/main must point to same commit"
+    );
 }
 
 // ── read_commit ───────────────────────────────────────────────────────────────
@@ -155,7 +161,10 @@ fn commit_has_author_and_committer() {
     let commit = repo.read_commit(&head).expect("read commit");
     assert_eq!(commit.author.name, "Forensic Tester");
     assert_eq!(commit.author.email, "tester@forensic.example");
-    assert!(commit.author.timestamp > 0, "author timestamp must be positive");
+    assert!(
+        commit.author.timestamp > 0,
+        "author timestamp must be positive"
+    );
     assert_eq!(commit.committer.name, "Forensic Tester");
 }
 
@@ -165,7 +174,11 @@ fn commit_has_one_parent() {
     let repo = fix.repo();
     let head = repo.head().expect("HEAD");
     let commit = repo.read_commit(&head).expect("read commit");
-    assert_eq!(commit.parents.len(), 1, "second commit must have one parent");
+    assert_eq!(
+        commit.parents.len(),
+        1,
+        "second commit must have one parent"
+    );
 }
 
 #[test]
@@ -245,8 +258,7 @@ fn raw_object_is_verified() {
 fn read_object_not_found_returns_err() {
     let fix = TestRepo::new_two_commit();
     let repo = fix.repo();
-    let fake = GitHash::from_hex("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-        .expect("valid hex");
+    let fake = GitHash::from_hex("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef").expect("valid hex");
     let result = repo.read_object(&fake);
     assert!(result.is_err(), "non-existent object must return Err");
 }

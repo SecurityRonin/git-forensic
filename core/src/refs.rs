@@ -31,5 +31,5 @@ pub fn resolve_ref(git_dir: &Path, refname: &str) -> Result<GitHash> {
     }
 
     GitHash::from_hex(content)
-        .map_err(|_| GitError::RefNotFound(format!("{refname}: invalid hash {:?}", content)))
+        .map_err(|_| GitError::RefNotFound(format!("{refname}: invalid hash {content:?}")))
 }

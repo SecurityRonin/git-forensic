@@ -46,7 +46,11 @@ pub fn read_packed(objects_dir: &Path, hash: &GitHash) -> Result<Option<RawObjec
             let pack = fs::read(idx_path.with_extension("pack"))?;
             let (kind, data) = read_object_at(&pack, offset, objects_dir, 0)?;
             let verified = verify(hash, kind, &data);
-            return Ok(Some(RawObject { kind, data, verified }));
+            return Ok(Some(RawObject {
+                kind,
+                data,
+                verified,
+            }));
         }
     }
     Ok(None)
@@ -65,13 +69,19 @@ fn idx_lookup(idx: &[u8], hash: &GitHash) -> Result<Option<u64>> {
     const FANOUT: usize = 8;
     let want = hash.as_bytes();
     let first = want[0] as usize;
-    let mut lo = if first == 0 { 0 } else { be_u32(idx, FANOUT + (first - 1) * 4)? } as usize;
+    let mut lo = if first == 0 {
+        0
+    } else {
+        be_u32(idx, FANOUT + (first - 1) * 4)?
+    } as usize;
     let mut hi = be_u32(idx, FANOUT + first * 4)? as usize;
     let count = be_u32(idx, FANOUT + 255 * 4)? as usize;
     let names = FANOUT + 256 * 4;
     while lo < hi {
         let mid = lo + (hi - lo) / 2;
-        let name = idx.get(names + mid * 20..names + mid * 20 + 20).ok_or(GitError::OutOfBounds)?;
+        let name = idx
+            .get(names + mid * 20..names + mid * 20 + 20)
+            .ok_or(GitError::OutOfBounds)?;
         match name.cmp(want.as_slice()) {
             std::cmp::Ordering::Less => lo = mid + 1,
             std::cmp::Ordering::Greater => hi = mid,
@@ -115,14 +125,15 @@ fn read_object_at(
         }
         7 => {
             // REF_DELTA: a 20-byte base hash, then the delta.
-            let base_hash = GitHash::from_bytes(
-                pack.get(body..body + 20).ok_or(GitError::OutOfBounds)?,
-            )?;
+            let base_hash =
+                GitHash::from_bytes(pack.get(body..body + 20).ok_or(GitError::OutOfBounds)?)?;
             let delta = inflate(pack, body + 20)?;
             let (kind, base) = resolve_base(objects_dir, &base_hash, depth + 1)?;
             Ok((kind, apply_delta(&base, &delta)?))
         }
-        other => Err(GitError::InvalidObject(format!("unknown pack object type {other}"))),
+        other => Err(GitError::InvalidObject(format!(
+            "unknown pack object type {other}"
+        ))),
     }
 }
 
@@ -151,7 +162,9 @@ fn parse_object_header(pack: &[u8], off: usize) -> Result<(u8, usize, usize)> {
     while more {
         let b = *pack.get(pos).ok_or(GitError::OutOfBounds)?;
         pos += 1;
-        size |= ((b & 0x7f) as usize).checked_shl(shift).ok_or(GitError::OutOfBounds)?;
+        size |= ((b & 0x7f) as usize)
+            .checked_shl(shift)
+            .ok_or(GitError::OutOfBounds)?;
         shift += 7;
         more = b & 0x80 != 0;
     }
@@ -177,7 +190,14 @@ fn parse_ofs_delta(pack: &[u8], off: usize) -> Result<(usize, usize)> {
 }
 
 /// Apply a git delta (`base` + delta instructions → reconstructed object).
-fn apply_delta(base: &[u8], delta: &[u8]) -> Result<Vec<u8>> {
+///
+/// Exposed for fuzzing: `delta` is fully attacker-controlled, so this must never
+/// panic or read out of bounds regardless of input.
+///
+/// # Errors
+/// Returns [`GitError`] on a malformed delta (bad opcode, out-of-range copy, or
+/// a size disagreeing with the delta header).
+pub fn apply_delta(base: &[u8], delta: &[u8]) -> Result<Vec<u8>> {
     let (_src, mut p) = read_delta_size(delta, 0)?;
     let (target_size, q) = read_delta_size(delta, p)?;
     p = q;
@@ -204,7 +224,9 @@ fn apply_delta(base: &[u8], delta: &[u8]) -> Result<Vec<u8>> {
             if copy_size == 0 {
                 copy_size = 0x1_0000;
             }
-            let end = copy_off.checked_add(copy_size).ok_or(GitError::OutOfBounds)?;
+            let end = copy_off
+                .checked_add(copy_size)
+                .ok_or(GitError::OutOfBounds)?;
             out.extend_from_slice(base.get(copy_off..end).ok_or(GitError::OutOfBounds)?);
         } else if cmd != 0 {
             // INSERT: `cmd` literal bytes follow in the delta stream.
@@ -231,7 +253,9 @@ fn read_delta_size(delta: &[u8], mut p: usize) -> Result<(usize, usize)> {
     loop {
         let b = *delta.get(p).ok_or(GitError::OutOfBounds)?;
         p += 1;
-        value |= ((b & 0x7f) as usize).checked_shl(shift).ok_or(GitError::OutOfBounds)?;
+        value |= ((b & 0x7f) as usize)
+            .checked_shl(shift)
+            .ok_or(GitError::OutOfBounds)?;
         shift += 7;
         if b & 0x80 == 0 {
             break;
@@ -260,7 +284,9 @@ fn kind_from_type(type_id: u8) -> Result<ObjectKind> {
         2 => Ok(ObjectKind::Tree),
         3 => Ok(ObjectKind::Blob),
         4 => Ok(ObjectKind::Tag),
-        other => Err(GitError::InvalidObject(format!("pack object type {other} is not a base type"))),
+        other => Err(GitError::InvalidObject(format!(
+            "pack object type {other} is not a base type"
+        ))),
     }
 }
 

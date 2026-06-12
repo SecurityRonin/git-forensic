@@ -1,5 +1,5 @@
-use std::fmt;
 use crate::error::{GitError, Result};
+use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GitHash(pub [u8; 20]);
@@ -9,7 +9,8 @@ impl GitHash {
         if s.len() != 40 {
             return Err(GitError::InvalidHash(format!(
                 "expected 40 hex chars, got {}: {:?}",
-                s.len(), s
+                s.len(),
+                s
             )));
         }
         let mut bytes = [0u8; 20];

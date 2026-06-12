@@ -44,8 +44,9 @@ impl TreeObject {
                 .position(|&b| b == 0)
                 .ok_or_else(|| GitError::InvalidObject("tree entry missing NUL".into()))?;
 
-            let header = std::str::from_utf8(&data[pos..pos + nul])
-                .map_err(|e| GitError::InvalidObject(format!("tree entry header not UTF-8: {e}")))?;
+            let header = std::str::from_utf8(&data[pos..pos + nul]).map_err(|e| {
+                GitError::InvalidObject(format!("tree entry header not UTF-8: {e}"))
+            })?;
 
             let (mode_str, name) = header
                 .split_once(' ')
@@ -57,7 +58,9 @@ impl TreeObject {
             pos += nul + 1;
 
             if pos + 20 > data.len() {
-                return Err(GitError::InvalidObject("tree entry truncated: no hash bytes".into()));
+                return Err(GitError::InvalidObject(
+                    "tree entry truncated: no hash bytes".into(),
+                ));
             }
             let entry_hash = GitHash::from_bytes(&data[pos..pos + 20])?;
             pos += 20;

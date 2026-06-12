@@ -37,14 +37,21 @@ fn flags_a_real_backdated_commit() {
     std::fs::write(root.join("f"), b"x").unwrap();
     git(root, &["add", "f"], "", "");
     // committer date EARLIER than author date → time inversion (backdating).
-    git(root, &["commit", "-qm", "backdated"],
-        "2020-06-01T00:00:00Z", "2020-05-01T00:00:00Z");
+    git(
+        root,
+        &["commit", "-qm", "backdated"],
+        "2020-06-01T00:00:00Z",
+        "2020-05-01T00:00:00Z",
+    );
 
     let repo = GitRepo::open(root).unwrap();
     let head = repo.head().unwrap();
     let anomalies = audit_repo(&repo, head).unwrap();
     assert_eq!(anomalies.len(), 1, "the backdated commit must be flagged");
-    assert!(matches!(anomalies[0], GitAnomaly::CommitterBeforeAuthor { .. }));
+    assert!(matches!(
+        anomalies[0],
+        GitAnomaly::CommitterBeforeAuthor { .. }
+    ));
 }
 
 #[test]
@@ -54,8 +61,12 @@ fn clean_repo_produces_no_findings() {
     init(root);
     std::fs::write(root.join("f"), b"x").unwrap();
     git(root, &["add", "f"], "", "");
-    git(root, &["commit", "-qm", "ok"],
-        "2020-05-01T00:00:00Z", "2020-05-01T00:00:00Z"); // committer == author
+    git(
+        root,
+        &["commit", "-qm", "ok"],
+        "2020-05-01T00:00:00Z",
+        "2020-05-01T00:00:00Z",
+    ); // committer == author
 
     let repo = GitRepo::open(root).unwrap();
     let head = repo.head().unwrap();

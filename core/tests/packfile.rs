@@ -34,7 +34,10 @@ fn packed_repo() -> TempDir {
     git(root, &["add", "-A"]);
     git_env_dated(root, &["commit", "-qm", "c1"]);
     // Local repack defaults to OFS_DELTA (type 6).
-    git(root, &["repack", "-a", "-d", "-q", "--window=10", "--depth=10"]);
+    git(
+        root,
+        &["repack", "-a", "-d", "-q", "--window=10", "--depth=10"],
+    );
     dir
 }
 
@@ -43,13 +46,29 @@ fn packed_repo() -> TempDir {
 fn packed_repo_ref_delta() -> TempDir {
     let dir = packed_repo();
     let root = dir.path();
-    git(root, &["-c", "pack.useOfsDelta=false", "repack", "-a", "-d", "-q", "-f",
-        "--window=10", "--depth=10"]);
+    git(
+        root,
+        &[
+            "-c",
+            "pack.useOfsDelta=false",
+            "repack",
+            "-a",
+            "-d",
+            "-q",
+            "-f",
+            "--window=10",
+            "--depth=10",
+        ],
+    );
     dir
 }
 
 fn git(root: &Path, args: &[&str]) {
-    let st = Command::new("git").args(args).current_dir(root).status().unwrap();
+    let st = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .status()
+        .unwrap();
     assert!(st.success(), "git {args:?}");
 }
 
@@ -70,8 +89,16 @@ fn git_env_dated(root: &Path, args: &[&str]) {
 
 /// `git` stdout, trimmed of a single trailing newline only when present as raw.
 fn git_out(root: &Path, args: &[&str]) -> Vec<u8> {
-    let out = Command::new("git").args(args).current_dir(root).output().unwrap();
-    assert!(out.status.success(), "git {args:?}: {}", String::from_utf8_lossy(&out.stderr));
+    let out = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "git {args:?}: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     out.stdout
 }
 
@@ -85,7 +112,10 @@ fn reads_packed_blob_matching_git() {
     let tr = packed_repo();
     let root = tr.path();
     let hash = rev_parse(root, "HEAD:a.txt");
-    let got = GitRepo::open(root).unwrap().read_blob(&hash).expect("read packed blob");
+    let got = GitRepo::open(root)
+        .unwrap()
+        .read_blob(&hash)
+        .expect("read packed blob");
     assert_eq!(got, git_out(root, &["cat-file", "-p", &hash.to_hex()]));
 }
 
@@ -113,8 +143,14 @@ fn reads_delta_encoded_object_matching_git() {
     let repo = GitRepo::open(root).unwrap();
     for name in ["big.txt", "big2.txt"] {
         let hash = rev_parse(root, &format!("HEAD:{name}"));
-        let got = repo.read_blob(&hash).unwrap_or_else(|e| panic!("read {name}: {e}"));
-        assert_eq!(got, git_out(root, &["cat-file", "-p", &hash.to_hex()]), "{name}");
+        let got = repo
+            .read_blob(&hash)
+            .unwrap_or_else(|e| panic!("read {name}: {e}"));
+        assert_eq!(
+            got,
+            git_out(root, &["cat-file", "-p", &hash.to_hex()]),
+            "{name}"
+        );
         assert!(!got.is_empty());
     }
 }
@@ -128,8 +164,14 @@ fn reads_ref_delta_object_matching_git() {
     let repo = GitRepo::open(root).unwrap();
     for name in ["big.txt", "big2.txt"] {
         let hash = rev_parse(root, &format!("HEAD:{name}"));
-        let got = repo.read_blob(&hash).unwrap_or_else(|e| panic!("ref-delta {name}: {e}"));
-        assert_eq!(got, git_out(root, &["cat-file", "-p", &hash.to_hex()]), "{name}");
+        let got = repo
+            .read_blob(&hash)
+            .unwrap_or_else(|e| panic!("ref-delta {name}: {e}"));
+        assert_eq!(
+            got,
+            git_out(root, &["cat-file", "-p", &hash.to_hex()]),
+            "{name}"
+        );
     }
 }
 
@@ -140,7 +182,10 @@ fn packed_object_sha1_verifies() {
     let repo = GitRepo::open(root).unwrap();
     let hash = rev_parse(root, "HEAD:big2.txt");
     let obj = repo.read_object(&hash).expect("read delta object");
-    assert!(obj.verified, "resolved delta object must hash back to its name");
+    assert!(
+        obj.verified,
+        "resolved delta object must hash back to its name"
+    );
 }
 
 #[test]

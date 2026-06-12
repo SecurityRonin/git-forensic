@@ -11,6 +11,7 @@
 //! backdating (benign causes include cross-machine clock skew).
 
 #![forbid(unsafe_code)]
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
 
 use forensicnomicon::report::{Category, Evidence, Observation, Severity, Source};
 use git_core::{CommitObject, GitHash, GitRepo, Result};
@@ -60,7 +61,11 @@ impl Observation for GitAnomaly {
 
     fn note(&self) -> String {
         match self {
-            Self::CommitterBeforeAuthor { committer_time, author_time, .. } => format!(
+            Self::CommitterBeforeAuthor {
+                committer_time,
+                author_time,
+                ..
+            } => format!(
                 "committer timestamp {committer_time} precedes author timestamp \
                  {author_time}; consistent with timestamp backdating (benign \
                  causes include cross-machine clock skew)"
@@ -70,8 +75,16 @@ impl Observation for GitAnomaly {
 
     fn evidence(&self) -> Vec<Evidence> {
         match self {
-            Self::CommitterBeforeAuthor { commit, author_time, committer_time } => vec![
-                Evidence { field: "commit".into(), value: commit.to_hex(), location: None },
+            Self::CommitterBeforeAuthor {
+                commit,
+                author_time,
+                committer_time,
+            } => vec![
+                Evidence {
+                    field: "commit".into(),
+                    value: commit.to_hex(),
+                    location: None,
+                },
                 Evidence {
                     field: "author_time".into(),
                     value: author_time.to_string(),
@@ -129,7 +142,12 @@ mod tests {
     use git_core::Signature;
 
     fn sig(ts: i64) -> Signature {
-        Signature { name: "A".into(), email: "a@b.x".into(), timestamp: ts, tz_offset_secs: 0 }
+        Signature {
+            name: "A".into(),
+            email: "a@b.x".into(),
+            timestamp: ts,
+            tz_offset_secs: 0,
+        }
     }
 
     fn commit(author_time: i64, committer_time: i64) -> CommitObject {
@@ -147,7 +165,10 @@ mod tests {
     fn flags_committer_before_author() {
         let anomalies = audit_commit(&commit(1_000, 900)); // committed "before" authored
         assert_eq!(anomalies.len(), 1);
-        assert!(matches!(anomalies[0], GitAnomaly::CommitterBeforeAuthor { .. }));
+        assert!(matches!(
+            anomalies[0],
+            GitAnomaly::CommitterBeforeAuthor { .. }
+        ));
     }
 
     #[test]

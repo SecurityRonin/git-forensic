@@ -60,7 +60,8 @@ impl CommitObject {
             hash,
             tree: tree.ok_or_else(|| GitError::InvalidObject("commit missing tree".into()))?,
             parents,
-            author: author.ok_or_else(|| GitError::InvalidObject("commit missing author".into()))?,
+            author: author
+                .ok_or_else(|| GitError::InvalidObject("commit missing author".into()))?,
             committer: committer
                 .ok_or_else(|| GitError::InvalidObject("commit missing committer".into()))?,
             message: text[message_start..].to_string(),
@@ -82,10 +83,7 @@ fn parse_signature(s: &str) -> Result<Signature> {
 
     let rest = s[email_end + 1..].trim();
     let mut parts = rest.split_whitespace();
-    let ts: i64 = parts
-        .next()
-        .and_then(|t| t.parse().ok())
-        .ok_or_else(err)?;
+    let ts: i64 = parts.next().and_then(|t| t.parse().ok()).ok_or_else(err)?;
     let tz = parts.next().unwrap_or("+0000");
 
     let sign = if tz.starts_with('-') { -1i32 } else { 1 };
@@ -98,5 +96,10 @@ fn parse_signature(s: &str) -> Result<Signature> {
         0
     };
 
-    Ok(Signature { name, email, timestamp: ts, tz_offset_secs })
+    Ok(Signature {
+        name,
+        email,
+        timestamp: ts,
+        tz_offset_secs,
+    })
 }

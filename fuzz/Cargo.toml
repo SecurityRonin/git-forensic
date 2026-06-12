@@ -1,0 +1,36 @@
+[package]
+name = "git-forensic-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+git-core = { path = "../core" }
+git-forensic = { path = "../forensic" }
+
+[[bin]]
+name = "loose"
+path = "fuzz_targets/loose.rs"
+test = false
+doc = false
+[[bin]]
+name = "commit"
+path = "fuzz_targets/commit.rs"
+test = false
+doc = false
+[[bin]]
+name = "tree"
+path = "fuzz_targets/tree.rs"
+test = false
+doc = false
+[[bin]]
+name = "delta"
+path = "fuzz_targets/delta.rs"
+test = false
+doc = false
+
+[workspace]

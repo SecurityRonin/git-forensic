@@ -32,7 +32,10 @@ impl GitRepo {
         };
 
         let objects_dir = git_dir.join("objects");
-        Ok(Self { git_dir, objects_dir })
+        Ok(Self {
+            git_dir,
+            objects_dir,
+        })
     }
 
     /// Resolve HEAD to its commit hash.
@@ -99,11 +102,11 @@ impl GitRepo {
     }
 
     /// Walk the commit ancestry chain, newest-first (first-parent only).
-    pub fn walk_commits(
-        &self,
-        from: GitHash,
-    ) -> impl Iterator<Item = Result<CommitObject>> + '_ {
-        CommitWalker { repo: self, next: Some(from) }
+    pub fn walk_commits(&self, from: GitHash) -> impl Iterator<Item = Result<CommitObject>> + '_ {
+        CommitWalker {
+            repo: self,
+            next: Some(from),
+        }
     }
 }
 

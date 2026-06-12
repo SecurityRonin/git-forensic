@@ -12,9 +12,9 @@ impl ObjectKind {
     pub fn from_bytes(b: &[u8]) -> Result<Self> {
         match b {
             b"commit" => Ok(Self::Commit),
-            b"tree"   => Ok(Self::Tree),
-            b"blob"   => Ok(Self::Blob),
-            b"tag"    => Ok(Self::Tag),
+            b"tree" => Ok(Self::Tree),
+            b"blob" => Ok(Self::Blob),
+            b"tag" => Ok(Self::Tag),
             other => Err(GitError::InvalidObject(format!(
                 "unknown object kind: {:?}",
                 String::from_utf8_lossy(other)
