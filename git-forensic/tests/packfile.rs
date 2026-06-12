@@ -33,7 +33,18 @@ fn packed_repo() -> TempDir {
 
     git(root, &["add", "-A"]);
     git_env_dated(root, &["commit", "-qm", "c1"]);
+    // Local repack defaults to OFS_DELTA (type 6).
     git(root, &["repack", "-a", "-d", "-q", "--window=10", "--depth=10"]);
+    dir
+}
+
+/// A packed repo forced to use REF_DELTA (type 7) — the 20-byte-base-hash form —
+/// so that delta path is validated, not just OFS_DELTA.
+fn packed_repo_ref_delta() -> TempDir {
+    let dir = packed_repo();
+    let root = dir.path();
+    git(root, &["-c", "pack.useOfsDelta=false", "repack", "-a", "-d", "-q", "-f",
+        "--window=10", "--depth=10"]);
     dir
 }
 
@@ -105,6 +116,20 @@ fn reads_delta_encoded_object_matching_git() {
         let got = repo.read_blob(&hash).unwrap_or_else(|e| panic!("read {name}: {e}"));
         assert_eq!(got, git_out(root, &["cat-file", "-p", &hash.to_hex()]), "{name}");
         assert!(!got.is_empty());
+    }
+}
+
+#[test]
+fn reads_ref_delta_object_matching_git() {
+    // Forces REF_DELTA (type 7): the delta names its base by 20-byte hash rather
+    // than a back-offset, exercising resolve_base().
+    let tr = packed_repo_ref_delta();
+    let root = tr.path();
+    let repo = GitRepo::open(root).unwrap();
+    for name in ["big.txt", "big2.txt"] {
+        let hash = rev_parse(root, &format!("HEAD:{name}"));
+        let got = repo.read_blob(&hash).unwrap_or_else(|e| panic!("ref-delta {name}: {e}"));
+        assert_eq!(got, git_out(root, &["cat-file", "-p", &hash.to_hex()]), "{name}");
     }
 }
 
