@@ -41,9 +41,21 @@ pub struct AttributionEvent {
 /// sorted by timestamp ascending; ties keep author before committer.
 #[must_use]
 pub fn attribution_timeline(commits: &[CommitObject]) -> Vec<AttributionEvent> {
-    // RED stub — replaced by the real builder in the GREEN commit.
-    let _ = commits;
-    Vec::new()
+    let mut events = Vec::with_capacity(commits.len() * 2);
+    for c in commits {
+        for (role, sig) in [(Role::Author, &c.author), (Role::Committer, &c.committer)] {
+            events.push(AttributionEvent {
+                commit: c.hash,
+                role,
+                name: sig.name.clone(),
+                email: sig.email.clone(),
+                timestamp: sig.timestamp,
+                tz_offset_secs: sig.tz_offset_secs,
+            });
+        }
+    }
+    events.sort_by(|a, b| a.timestamp.cmp(&b.timestamp).then((a.role as u8).cmp(&(b.role as u8))));
+    events
 }
 
 /// Distinct `(name, email)` identities appearing across `commits`, in first-seen
