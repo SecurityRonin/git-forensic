@@ -6,6 +6,13 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+repository = "https://github.com/SecurityRonin/git-forensic"
+homepage = "https://github.com/SecurityRonin/git-forensic"
+documentation = "https://docs.rs/git-core"
+readme = "README.md"
+keywords = ["forensics", "git", "dfir", "incident-response", "version-control"]
+categories = ["parser-implementations", "development-tools"]
+exclude = ["/fuzz", "/.github", "/docs"]
 
 [dependencies]
 flate2 = "1"

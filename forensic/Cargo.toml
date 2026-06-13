@@ -1,11 +1,18 @@
 [package]
 name = "git-forensic"
 version = "0.1.0"
-description = "Forensic anomaly auditor for Git object stores — commit-time inversion (backdating) as graded report::Finding, built on git-core"
+description = "Forensic anomaly auditor for Git object stores — backdated commits, rewritten history, unsigned-in-signed-history, and unreachable objects as graded report::Finding, built on git-core"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
+repository = "https://github.com/SecurityRonin/git-forensic"
+homepage = "https://github.com/SecurityRonin/git-forensic"
+documentation = "https://docs.rs/git-forensic"
+readme = "README.md"
+keywords = ["forensics", "git", "dfir", "incident-response", "version-control"]
+categories = ["parser-implementations", "development-tools"]
+exclude = ["/fuzz", "/.github", "/docs"]
 
 [dependencies]
 git-core = { version = "0.1", path = "../core" }
