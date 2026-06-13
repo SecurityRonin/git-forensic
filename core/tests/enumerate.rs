@@ -40,6 +40,58 @@ fn build_repo(root: &Path) {
     git(root, &["commit", "-qm", "B"]);
 }
 
+// ── cross-platform (.git produced on / read from mac, linux, windows) ──────────
+
+#[test]
+fn nested_ref_name_is_slash_canonical_on_every_host() {
+    // A nested branch (refs/heads/feature/sub) is stored as a directory tree on
+    // disk. The ref NAME must always be git-canonical with '/' separators,
+    // regardless of the analysis host's path separator — collect_loose_refs joins
+    // single file_name() components with '/', never an OS path. This is the core
+    // of "reads a .git from any OS on any OS".
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    build_repo(root);
+    git(root, &["branch", "feature/sub"]);
+
+    let refs = list_refs(&root.join(".git"));
+    assert!(
+        refs.iter().any(|(n, _)| n == "refs/heads/feature/sub"),
+        "nested ref must be slash-canonical, got: {:?}",
+        refs.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>()
+    );
+    // And never leak a backslash (the Windows separator) into a ref name.
+    assert!(
+        refs.iter().all(|(n, _)| !n.contains('\\')),
+        "no ref name may contain a backslash"
+    );
+}
+
+#[test]
+fn crlf_packed_refs_parse_like_a_windows_authored_git() {
+    // git on Windows can leave CRLF line endings in control files. A packed-refs
+    // written with \r\n must parse identically to \n — the reader splits on
+    // .lines() (which strips a trailing \r) and trims each line.
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    build_repo(root);
+    let git_dir = root.join(".git");
+    let head = GitRepo::open(root).unwrap().head().unwrap().to_hex();
+
+    // Overwrite packed-refs with explicit CRLF, including a comment + a peel line.
+    let packed = format!("# pack-refs with: peeled fully-peeled sorted\r\n{head} refs/heads/crlf-branch\r\n");
+    std::fs::write(git_dir.join("packed-refs"), packed.as_bytes()).unwrap();
+
+    let refs = list_refs(&git_dir);
+    let found = refs.iter().find(|(n, _)| n == "refs/heads/crlf-branch");
+    assert!(found.is_some(), "CRLF packed-refs line must parse");
+    assert_eq!(
+        found.unwrap().1.to_hex(),
+        head,
+        "CRLF ref must resolve to the right hash (no trailing \\r in the name or sha)"
+    );
+}
+
 /// Every object git knows (`git cat-file --batch-all-objects`), as a set.
 fn all_git_objects(root: &Path) -> BTreeSet<String> {
     let out = git(
