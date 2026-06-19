@@ -142,9 +142,22 @@ impl GitRepo {
 
     /// Every ref in the repository as `(refname, target_hash)` pairs (loose
     /// `refs/**`, `packed-refs`, and `HEAD`).
+    ///
+    /// Best-effort: a refs-subsystem I/O failure degrades to fewer refs. Code
+    /// that computes reachability from these roots must use [`Self::all_refs_checked`]
+    /// instead, so a bootstrap failure cannot masquerade as "zero refs".
     #[must_use]
     pub fn all_refs(&self) -> Vec<(String, GitHash)> {
         refs::list_refs(&self.git_dir)
+    }
+
+    /// Like [`Self::all_refs`] but surfaces a ref-enumeration I/O failure as an
+    /// error instead of silently returning fewer (or zero) refs.
+    ///
+    /// # Errors
+    /// [`GitError::Io`] if the refs subsystem exists but cannot be enumerated/read.
+    pub fn all_refs_checked(&self) -> Result<Vec<(String, GitHash)>> {
+        refs::list_refs_checked(&self.git_dir)
     }
 }
 

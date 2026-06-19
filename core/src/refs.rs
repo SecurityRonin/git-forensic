@@ -8,39 +8,9 @@ use crate::hash::GitHash;
 /// pairs. Unresolvable or malformed refs are skipped; never panics.
 #[must_use]
 pub fn list_refs(git_dir: &Path) -> Vec<(String, GitHash)> {
-    let mut out: Vec<(String, GitHash)> = Vec::new();
-
-    // Loose refs under refs/ (recursively).
-    let refs_root = git_dir.join("refs");
-    collect_loose_refs(&refs_root, "refs", git_dir, &mut out);
-
-    // packed-refs: lines of "<sha> <refname>"; "^<sha>" peel lines are skipped
-    // (the peeled tag commit is reachable via the tag object itself).
-    if let Ok(text) = std::fs::read_to_string(git_dir.join("packed-refs")) {
-        for line in text.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') || line.starts_with('^') {
-                continue;
-            }
-            if let Some((sha, name)) = line.split_once(' ') {
-                if out.iter().any(|(n, _)| n == name) {
-                    continue; // a loose ref shadows the packed one.
-                }
-                if let Ok(hash) = GitHash::from_hex(sha.trim()) {
-                    out.push((name.trim().to_string(), hash));
-                }
-            }
-        }
-    }
-
-    // HEAD, resolved to a hash (symbolic or detached).
-    if let Ok(hash) = resolve_ref(git_dir, "HEAD") {
-        if !out.iter().any(|(n, _)| n == "HEAD") {
-            out.push(("HEAD".to_string(), hash));
-        }
-    }
-
-    out
+    // Best-effort facade: a refs-subsystem I/O failure degrades to fewer refs.
+    // Reachability callers MUST use `list_refs_checked` instead — see its docs.
+    list_refs_checked(git_dir).unwrap_or_default()
 }
 
 /// Like [`list_refs`] but **fails loud on a ref-enumeration I/O error** instead of
@@ -54,15 +24,72 @@ pub fn list_refs(git_dir: &Path) -> Vec<(String, GitHash)> {
 /// # Errors
 /// [`GitError::Io`] if a refs path that exists cannot be enumerated/read.
 pub fn list_refs_checked(git_dir: &Path) -> Result<Vec<(String, GitHash)>> {
-    Ok(list_refs(git_dir)) // stub — real implementation lands in GREEN
+    let mut out: Vec<(String, GitHash)> = Vec::new();
+
+    // Loose refs under refs/ (recursively). An absent refs/ is the legitimate
+    // empty case; any other read failure is a bootstrap error that propagates.
+    let refs_root = git_dir.join("refs");
+    collect_loose_refs_checked(&refs_root, "refs", git_dir, &mut out)?;
+
+    // packed-refs: lines of "<sha> <refname>"; "^<sha>" peel lines are skipped
+    // (the peeled tag commit is reachable via the tag object itself). Absent is
+    // fine; an existing-but-unreadable packed-refs is a bootstrap failure.
+    match std::fs::read_to_string(git_dir.join("packed-refs")) {
+        Ok(text) => {
+            for line in text.lines() {
+                let line = line.trim();
+                if line.is_empty() || line.starts_with('#') || line.starts_with('^') {
+                    continue;
+                }
+                if let Some((sha, name)) = line.split_once(' ') {
+                    if out.iter().any(|(n, _)| n == name) {
+                        continue; // a loose ref shadows the packed one.
+                    }
+                    if let Ok(hash) = GitHash::from_hex(sha.trim()) {
+                        out.push((name.trim().to_string(), hash));
+                    }
+                }
+            }
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(GitError::Io(e)),
+    }
+
+    // HEAD, resolved to a hash (symbolic or detached). A missing/unborn HEAD is
+    // a per-ref miss (RefNotFound); only an I/O failure is a bootstrap error.
+    match resolve_ref(git_dir, "HEAD") {
+        Ok(hash) => {
+            if !out.iter().any(|(n, _)| n == "HEAD") {
+                out.push(("HEAD".to_string(), hash));
+            }
+        }
+        Err(GitError::RefNotFound(_)) => {}
+        Err(e) => return Err(e),
+    }
+
+    Ok(out)
 }
 
 /// Recursively walk a loose-ref directory, appending `(refname, hash)` pairs.
-fn collect_loose_refs(dir: &Path, prefix: &str, git_dir: &Path, out: &mut Vec<(String, GitHash)>) {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return;
+///
+/// A genuinely-absent directory (`NotFound`) is the empty case and yields
+/// `Ok(())`; any other `read_dir`/entry I/O error — including `refs/` existing
+/// but not being a directory — propagates as [`GitError::Io`]. Individual refs
+/// that fail to *resolve* (`RefNotFound`) are skipped as per-artifact misses,
+/// not bootstrap failures.
+fn collect_loose_refs_checked(
+    dir: &Path,
+    prefix: &str,
+    git_dir: &Path,
+    out: &mut Vec<(String, GitHash)>,
+) -> Result<()> {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(e) => return Err(GitError::Io(e)),
     };
-    for entry in entries.flatten() {
+    for entry in entries {
+        let entry = entry.map_err(GitError::Io)?;
         let name = entry.file_name();
         let Some(name) = name.to_str() else {
             continue;
@@ -70,11 +97,16 @@ fn collect_loose_refs(dir: &Path, prefix: &str, git_dir: &Path, out: &mut Vec<(S
         let refname = format!("{prefix}/{name}");
         let path = entry.path();
         if path.is_dir() {
-            collect_loose_refs(&path, &refname, git_dir, out);
-        } else if let Ok(hash) = resolve_ref(git_dir, &refname) {
-            out.push((refname, hash));
+            collect_loose_refs_checked(&path, &refname, git_dir, out)?;
+        } else {
+            match resolve_ref(git_dir, &refname) {
+                Ok(hash) => out.push((refname, hash)),
+                Err(GitError::RefNotFound(_)) => {} // unresolvable ref: per-artifact miss
+                Err(e) => return Err(e),            // I/O error reading an existing ref
+            }
         }
     }
+    Ok(())
 }
 
 /// Resolve a ref name to its target hash.

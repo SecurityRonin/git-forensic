@@ -80,9 +80,18 @@ fn kind_str(kind: ObjectKind) -> &'static str {
 /// Objects that fail to read or parse are recorded as reached-but-not-expanded
 /// rather than aborting the walk — robustness on a damaged store beats a hard
 /// failure.
-fn reachable_set(repo: &GitRepo) -> HashSet<GitHash> {
+///
+/// # Errors
+/// Propagates a [`git_core::GitError::Io`] if the ref roots cannot be enumerated. This is
+/// a *bootstrap* failure and MUST NOT be swallowed into an empty root set, which
+/// would make every object look unreachable (a false-positive inversion).
+fn reachable_set(repo: &GitRepo) -> Result<HashSet<GitHash>> {
     let mut reached = HashSet::new();
-    let mut stack: Vec<GitHash> = repo.all_refs().into_iter().map(|(_, h)| h).collect();
+    let mut stack: Vec<GitHash> = repo
+        .all_refs_checked()?
+        .into_iter()
+        .map(|(_, h)| h)
+        .collect();
 
     while let Some(hash) = stack.pop() {
         if !reached.insert(hash) {
@@ -107,15 +116,17 @@ fn reachable_set(repo: &GitRepo) -> HashSet<GitHash> {
             ObjectKind::Blob | ObjectKind::Tag => {}
         }
     }
-    reached
+    Ok(reached)
 }
 
 /// Audit `repo` for objects reachable from no ref (`all_objects − reachable`).
 ///
 /// # Errors
-/// Propagates a [`git_core`] error from object enumeration.
+/// Propagates a [`git_core`] error from ref enumeration or object enumeration.
+/// A ref-enumeration failure is surfaced rather than misreported as every
+/// object being unreachable.
 pub fn audit_unreachable(repo: &GitRepo) -> Result<Vec<UnreachableObject>> {
-    let reached = reachable_set(repo);
+    let reached = reachable_set(repo)?;
     let mut out = Vec::new();
     for hash in repo.all_objects()? {
         if reached.contains(&hash) {
