@@ -43,6 +43,20 @@ pub fn list_refs(git_dir: &Path) -> Vec<(String, GitHash)> {
     out
 }
 
+/// Like [`list_refs`] but **fails loud on a ref-enumeration I/O error** instead of
+/// silently returning fewer refs. A genuine failure to read the refs subsystem
+/// (e.g. `refs/` present but unreadable, a `packed-refs` that exists but can't be
+/// read) is a *bootstrap* failure: callers that compute reachability from these
+/// refs (the unreachable-object audit) must NOT treat it as "zero refs" — that
+/// would flag every object as orphaned (a false-positive inversion). A genuinely
+/// *absent* file/dir (`NotFound`) is the legitimate empty case and is NOT an error.
+///
+/// # Errors
+/// [`GitError::Io`] if a refs path that exists cannot be enumerated/read.
+pub fn list_refs_checked(git_dir: &Path) -> Result<Vec<(String, GitHash)>> {
+    Ok(list_refs(git_dir)) // stub — real implementation lands in GREEN
+}
+
 /// Recursively walk a loose-ref directory, appending `(refname, hash)` pairs.
 fn collect_loose_refs(dir: &Path, prefix: &str, git_dir: &Path, out: &mut Vec<(String, GitHash)>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -92,4 +106,32 @@ pub fn resolve_ref(git_dir: &Path, refname: &str) -> Result<GitHash> {
 
     GitHash::from_hex(content)
         .map_err(|_| GitError::RefNotFound(format!("{refname}: invalid hash {content:?}")))
+}
+
+#[cfg(test)]
+mod refs_bootstrap_tests {
+    use super::*;
+
+    #[test]
+    fn list_refs_checked_errs_on_unreadable_refs() {
+        let tmp = tempfile::tempdir().unwrap();
+        // Corrupt repo: `refs` is a FILE where a directory is expected, so
+        // read_dir fails with a non-NotFound error. That I/O failure to enumerate
+        // refs MUST surface — swallowing it into empty roots makes the unreachable
+        // audit flag every object as orphaned (a false-positive flood).
+        std::fs::write(tmp.path().join("refs"), b"corrupt").unwrap();
+        assert!(
+            list_refs_checked(tmp.path()).is_err(),
+            "an unreadable refs/ must surface as an error, not empty refs"
+        );
+    }
+
+    #[test]
+    fn list_refs_checked_ok_when_refs_genuinely_absent() {
+        let tmp = tempfile::tempdir().unwrap();
+        // No refs/, no packed-refs, no HEAD → genuinely zero refs (a fresh/refless
+        // repo). The legitimate empty case must be Ok(empty), NOT an error — else
+        // we'd refuse on a genuinely all-orphaned repository.
+        assert_eq!(list_refs_checked(tmp.path()).unwrap(), Vec::new());
+    }
 }

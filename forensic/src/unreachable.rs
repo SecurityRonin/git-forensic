@@ -152,4 +152,22 @@ mod tests {
         assert_eq!(commit.category(), Category::Residue);
         assert!(commit.note().contains("commit"));
     }
+
+    /// The inversion guard: when ref enumeration FAILS (a bootstrap failure), the
+    /// audit must ERROR, not silently treat the empty root set as "everything is
+    /// unreachable" (which would flag every object in the store as orphaned — a
+    /// false-positive flood indistinguishable from a genuinely all-orphaned repo).
+    #[test]
+    fn audit_unreachable_errs_when_ref_bootstrap_fails() {
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("HEAD"), b"ref: refs/heads/main\n").unwrap();
+        std::fs::create_dir(tmp.path().join("objects")).unwrap();
+        // Corrupt the refs subsystem: `refs` is a FILE, so enumeration fails.
+        std::fs::write(tmp.path().join("refs"), b"corrupt").unwrap();
+        let repo = GitRepo::open(tmp.path()).unwrap();
+        assert!(
+            audit_unreachable(&repo).is_err(),
+            "a failed ref bootstrap must error, not report all objects unreachable"
+        );
+    }
 }
