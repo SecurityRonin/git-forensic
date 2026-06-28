@@ -15,7 +15,7 @@ categories = ["parser-implementations", "development-tools"]
 exclude = ["/fuzz", "/.github", "/docs"]
 
 [dependencies]
-git-core = { version = "0.1", path = "../core" }
+git-core = { version = "0.2", path = "../core" }
 # Git knowledge + the shared report model (Severity/Category/Observation).
 forensicnomicon = "1"
 

@@ -1,6 +1,6 @@
 [package]
 name = "git-core"
-version = "0.1.0"
+version = "0.2.0"
 description = "Git object-store reader: loose + packfile (v2, OFS/REF delta) objects, refs, commits, trees over a content-addressed Merkle DAG"
 edition.workspace = true
 rust-version.workspace = true
