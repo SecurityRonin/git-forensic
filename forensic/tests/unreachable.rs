@@ -67,7 +67,10 @@ fn flags_an_orphaned_commit_and_agrees_with_fsck() {
 
     // Our unreachable-commit set must contain B.
     let our_commits: BTreeSet<String> = found.iter().map(|a| a.object.to_hex()).collect();
-    assert!(our_commits.contains(&b_sha), "orphaned commit B must be flagged");
+    assert!(
+        our_commits.contains(&b_sha),
+        "orphaned commit B must be flagged"
+    );
 
     // Cross-check our unreachable *commits* against git fsck.
     let our_unreachable_commits: BTreeSet<String> = found

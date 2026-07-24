@@ -54,7 +54,11 @@ pub fn attribution_timeline(commits: &[CommitObject]) -> Vec<AttributionEvent> {
             });
         }
     }
-    events.sort_by(|a, b| a.timestamp.cmp(&b.timestamp).then((a.role as u8).cmp(&(b.role as u8))));
+    events.sort_by(|a, b| {
+        a.timestamp
+            .cmp(&b.timestamp)
+            .then((a.role as u8).cmp(&(b.role as u8)))
+    });
     events
 }
 
@@ -147,7 +151,10 @@ mod tests {
         let ids = distinct_identities(std::slice::from_ref(&c));
         assert_eq!(
             ids,
-            vec![("alice".into(), "alice@x".into()), ("bob".into(), "bob@x".into())]
+            vec![
+                ("alice".into(), "alice@x".into()),
+                ("bob".into(), "bob@x".into())
+            ]
         );
         // committer == author → a single identity, no duplicate.
         let solo = commit(

@@ -151,9 +151,15 @@ mod tests {
     #[test]
     fn classifies_each_rewrite_kind() {
         assert_eq!(classify_rewrite("reset: moving to HEAD~1"), Some("reset"));
-        assert_eq!(classify_rewrite("rebase (finish): refs/heads/x"), Some("rebase"));
+        assert_eq!(
+            classify_rewrite("rebase (finish): refs/heads/x"),
+            Some("rebase")
+        );
         assert_eq!(classify_rewrite("rebase -i (start): x"), Some("rebase"));
-        assert_eq!(classify_rewrite("filter-branch: rewrite"), Some("filter-branch"));
+        assert_eq!(
+            classify_rewrite("filter-branch: rewrite"),
+            Some("filter-branch")
+        );
         assert_eq!(classify_rewrite("commit (amend): reworded"), Some("amend"));
         assert_eq!(
             classify_rewrite("update by push (forced update)"),

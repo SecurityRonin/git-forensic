@@ -73,7 +73,11 @@ fn flags_unsigned_commit_in_signed_history() {
     let commits: Vec<_> = repo.walk_commits(head).map(|c| c.unwrap()).collect();
 
     let found = audit_signatures(&commits);
-    assert_eq!(found.len(), 1, "exactly the unsigned commit must be flagged");
+    assert_eq!(
+        found.len(),
+        1,
+        "exactly the unsigned commit must be flagged"
+    );
     let SignatureAnomaly::UnsignedInSignedHistory { commit, .. } = &found[0] else {
         panic!("expected UnsignedInSignedHistory")
     };

@@ -99,7 +99,7 @@ fn parse_signature(s: &str) -> Result<Signature> {
 
     let sign = if tz.starts_with('-') { -1i32 } else { 1 };
     let tz_digits = tz.trim_start_matches(['+', '-']);
-    let tz_offset_secs = if tz_digits.len() == 4 {
+    let tz_offset_secs = if tz_digits.len() == 4 && tz_digits.is_ascii() {
         let hh: i32 = tz_digits[..2].parse().unwrap_or(0);
         let mm: i32 = tz_digits[2..].parse().unwrap_or(0);
         sign * (hh * 3600 + mm * 60)
@@ -113,4 +113,27 @@ fn parse_signature(s: &str) -> Result<Signature> {
         timestamp: ts,
         tz_offset_secs,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_signature;
+
+    #[test]
+    fn tz_field_that_is_a_single_multibyte_char_does_not_panic() {
+        // Regression: `tz_digits.len() == 4` is a *byte* length, but slicing
+        // `[..2]`/`[2..]` assumes char boundaries. A 4-byte UTF-8 char (byte
+        // length 4) is not sliceable at index 2. Found by the commit fuzzer:
+        // "end byte index 2 is not a char boundary; it is inside '\u{d168a}'".
+        let sig = parse_signature("n <e> 0 \u{d168a}").expect("parses");
+        assert_eq!(sig.tz_offset_secs, 0, "malformed tz degrades to offset 0");
+    }
+
+    #[test]
+    fn ascii_tz_offset_still_parses() {
+        let sig = parse_signature("Ada <ada@x> 1136239445 +0530").expect("parses");
+        assert_eq!(sig.tz_offset_secs, 5 * 3600 + 30 * 60);
+        let neg = parse_signature("Ada <ada@x> 1136239445 -0800").expect("parses");
+        assert_eq!(neg.tz_offset_secs, -8 * 3600);
+    }
 }

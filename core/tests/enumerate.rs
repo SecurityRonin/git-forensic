@@ -79,7 +79,9 @@ fn crlf_packed_refs_parse_like_a_windows_authored_git() {
     let head = GitRepo::open(root).unwrap().head().unwrap().to_hex();
 
     // Overwrite packed-refs with explicit CRLF, including a comment + a peel line.
-    let packed = format!("# pack-refs with: peeled fully-peeled sorted\r\n{head} refs/heads/crlf-branch\r\n");
+    let packed = format!(
+        "# pack-refs with: peeled fully-peeled sorted\r\n{head} refs/heads/crlf-branch\r\n"
+    );
     std::fs::write(git_dir.join("packed-refs"), packed.as_bytes()).unwrap();
 
     let refs = list_refs(&git_dir);
@@ -96,7 +98,11 @@ fn crlf_packed_refs_parse_like_a_windows_authored_git() {
 fn all_git_objects(root: &Path) -> BTreeSet<String> {
     let out = git(
         root,
-        &["cat-file", "--batch-all-objects", "--batch-check=%(objectname)"],
+        &[
+            "cat-file",
+            "--batch-all-objects",
+            "--batch-check=%(objectname)",
+        ],
     );
     String::from_utf8(out.stdout)
         .unwrap()
@@ -149,7 +155,10 @@ fn list_loose_and_list_packed_split_correctly() {
     git(root, &["repack", "-a", "-d", "-q"]);
     let loose2 = list_loose(&objects_dir);
     let packed2 = list_packed(&objects_dir).unwrap();
-    assert!(loose2.is_empty(), "after repack -d, no loose objects remain");
+    assert!(
+        loose2.is_empty(),
+        "after repack -d, no loose objects remain"
+    );
     assert!(!packed2.is_empty(), "after repack, objects are packed");
 }
 

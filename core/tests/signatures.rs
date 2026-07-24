@@ -76,7 +76,10 @@ fn detects_signed_and_unsigned_commits() {
     assert_eq!(commits.len(), 3);
 
     // Newest-first: unsigned, signed 1, signed 0.
-    assert!(!commits[0].is_signed, "the --no-gpg-sign commit is unsigned");
+    assert!(
+        !commits[0].is_signed,
+        "the --no-gpg-sign commit is unsigned"
+    );
     assert!(commits[0].message.starts_with("unsigned"));
     assert!(commits[1].is_signed, "signed commit must be detected");
     assert!(commits[1].message.starts_with("signed 1"));
@@ -89,5 +92,8 @@ fn detects_signed_and_unsigned_commits() {
         .current_dir(root)
         .output()
         .unwrap();
-    assert!(!out.status.success(), "git verify-commit must fail on unsigned");
+    assert!(
+        !out.status.success(),
+        "git verify-commit must fail on unsigned"
+    );
 }
