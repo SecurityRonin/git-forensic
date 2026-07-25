@@ -161,7 +161,7 @@ dependencies = [
 
 [[package]]
 name = "git-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "flate2",
  "hex",
@@ -172,7 +172,7 @@ dependencies = [
 
 [[package]]
 name = "git-forensic"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "forensicnomicon",
  "git-core",

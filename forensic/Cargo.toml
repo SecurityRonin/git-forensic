@@ -1,6 +1,6 @@
 [package]
 name = "git-forensic"
-version = "0.2.0"
+version = "0.2.1"
 description = "Forensic anomaly auditor for Git object stores — backdated commits, rewritten history, unsigned-in-signed-history, and unreachable objects as graded report::Finding, built on git-core"
 edition.workspace = true
 rust-version.workspace = true
